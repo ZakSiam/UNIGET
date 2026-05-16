@@ -1,0 +1,122 @@
+# @package _global_
+training:
+  deepspeed_conf_file: ""
+  use_deepspeed: null
+  output_dir: "../exp/models/graph_llama_test"
+  pretrain_cpt: ""
+  pretrain_mode: false  # affects the sampling for edge-/node- level tasks
+  gpu_name: null
+  # moved here from tokenization cfg
+  task_type: "pretrain-mlm"  # pretrain|graph|edge|node
+  # --- Pre-training Masked Language Model (MLM) Settings ---
+  # moved here from tokenization cfg
+  pretrain_mlm:  # TODO: refactor to be similar to `finetune`
+    name: "polynomial"
+    params:
+      fixed_ratio: 0.7
+      power: 1
+      mtp: [ 1, 0, 0 ]
+      umr_clip: [0.01, 0.99]  # un-mask ratio clip range, i.e., percentage of presented tokens
+    dlm_wgt: true  # whether to turn on the weights in discrete diffusion LM's loss
+    num_gen_samples: 128  # num of samples picked for generation
+
+  schedule:
+    epochs: null
+    warmup_epochs: null
+    total_tokens: 1e9
+    warmup_tokens: 1e8
+    total_num_steps: null
+    warmup_num_steps: null
+    logging_steps: 100
+    steps_per_saving: null
+    steps_per_eval: null
+  optimizer:
+    lr: 0.001
+    min_lr: 0.0
+    betas: [ 0.9, 0.95 ]
+    weight_decay: 0.1
+    eps: 1e-6
+    max_grad_norm: 1.0
+    gradient_accumulation_steps: 1
+    use_ema: false
+    ema_decay: 0.9999
+  tot_samples: 10000  # num of samples for estimating tokens-per-sample
+  batch_size: 128
+  batch_size_eval: 128  # small to avoid OOM when evaluating during finetuning
+  max_length: null  # used in finetuning
+  pad_to_multiple_of: 8
+  pack_tokens: 0
+  num_workers: 8  # num of workers for data processing in train DataLoader
+  num_workers_eval: 8  # num of workers for data processing in eval DataLoader
+  valid_percent: 0
+  do_valid: false
+  do_test: false  # can be used to evaluate EMA ckp with validation data
+  do_generation: false
+  do_infer: false
+  pt_eval_only: false
+  #TODO: refactor into pt_eval
+  focal_gamma: 0  # 0 for CE; other vals for focal-loss
+  distributed:
+    world_size: 1
+    rank: 0
+  finetune:  # TODO: change to `ft_train`
+    freeze: -1  # how to freeze the params of backbone architecture: -1->no, 0->embedding
+    seed: -1  # seed to shuffle train sampler
+    use_aux: false
+    aux_ratio: 0
+    task_ratio: 1
+  ft_eval:
+    save_pred: false  # whether to save prediction results
+    save_final_predictions: false
+    save_hidden_states: false
+    infer_only: false
+    eval_only: false
+    save_best_by_valid: false
+    test_once_after_train: false
+    skip_test_during_train: false
+    early_stopping_patience: null
+    epoch_per_eval: 1
+    k_samplers: 262144  # 2^14=16384  2^16=65536  2^18=262144
+    true_valid: -1
+  # --- PyTorch Profiler Settings for GPU Performance Analysis ---
+  # Enable to analyze GPU duty cycle, SM utilization, and bottlenecks
+  profiler:
+    enabled: false  # Set to true to enable profiling
+    wait_steps: 5  # Steps to wait before profiling (let model warm up)
+    warmup_steps: 5  # Steps where profiler is on but data is discarded
+    active_steps: 10  # Steps to actively collect profiling data
+    repeat: 1  # Number of profiling cycles (0 = profile once and stop)
+    record_shapes: true  # Record tensor shapes for each operation
+    profile_memory: true  # Track CUDA memory allocations
+    with_stack: true  # Record Python call stacks (useful for identifying bottlenecks)
+    with_flops: true  # Estimate FLOPs for each operator
+    with_modules: true  # Record PyTorch module hierarchy
+    export_chrome_trace: true  # Export chrome://tracing compatible traces
+    export_stacks: false  # Export stack traces to file
+    tensorboard: true  # Export TensorBoard logs for visualization
+  # --- Weights & Biases (wandb) Logging Configuration ---
+  # Enable to log training metrics, system info, and visualizations to wandb
+  wandb:
+    enabled: false  # Set to true to enable wandb logging
+    api_key: null  # Wandb API key. Can also use WANDB_API_KEY env var
+    project: null  # Name of the wandb project (required when enabled)
+    entity: null  # Wandb entity (team or username). Uses default if null
+    name: null  # Run name. Auto-generated if null
+    tags: null  # List of tags for the run, e.g., ["pretrain", "pcqm4m"]
+    notes: null  # Notes/description for the run
+    group: null  # Group name for organizing related runs
+    job_type: null  # Job type, e.g., "train", "eval", "pretrain", "finetune"
+    resume: null  # Resume mode: "allow", "must", "never", "auto", or null
+    log_model: false  # Whether to log model checkpoints to wandb
+    log_freq: null  # Log frequency in steps. Uses logging_steps if null
+  # --- torch.compile() Configuration for Kernel Optimization ---
+  # Enable to reduce kernel fragmentation and improve GPU efficiency
+  torch_compile:
+    enabled: false  # Set to true to enable torch.compile
+    mode: "reduce-overhead"  # Options: "default", "reduce-overhead", "max-autotune"
+    # - reduce-overhead: Best for reducing kernel launch overhead (recommended)
+    # - max-autotune: Best performance but slower compilation time
+    # - default: Balanced option
+    backend: "inductor"  # Compilation backend (inductor is recommended)
+    fullgraph: false  # Whether to require full graph compilation
+    dynamic: true  # Allow dynamic shapes (recommended for variable sequence lengths)

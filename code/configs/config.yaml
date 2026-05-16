@@ -1,0 +1,19 @@
+# @package _global_
+defaults:
+  - _self_
+  - tokenization: base
+  - model: base
+  - training: base
+  - generation: base
+  - override hydra/launcher: basic
+
+# Main configuration groups
+project_name: "graph-gpt"
+
+# Parameters that can be overridden via command line
+hydra:
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
